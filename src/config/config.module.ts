@@ -3,13 +3,14 @@ import { ConfigModule as NestConfigModule } from '@nestjs/config';
 import { appConfig } from './app.config';
 import { databaseConfig } from './database.config';
 import { AppConfigService } from './app-config.service';
+import { redisConfig } from './redis.config';
 
 @Global()
 @Module({
   imports: [
     NestConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig, databaseConfig],
+      load: [appConfig, databaseConfig, redisConfig],
     }),
   ],
   providers: [AppConfigService],
