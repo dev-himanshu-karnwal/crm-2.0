@@ -2,5 +2,11 @@ import { UserEntity } from '../entities/user.entity';
 
 export interface IUserRepository {
   findById(id: string): Promise<UserEntity | null>;
-  create(email: string, name?: string): Promise<UserEntity>;
+  findByEmailOrUserId(identifier: string): Promise<UserEntity | null>;
+  create(data: {
+    email: string;
+    userId: string;
+    password: string;
+    name?: string;
+  }): Promise<UserEntity>;
 }

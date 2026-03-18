@@ -7,6 +7,9 @@ export class UserResponseDto {
   @ApiProperty()
   email: string;
 
+  @ApiProperty()
+  userId: string;
+
   @ApiPropertyOptional()
   name?: string | null;
 
