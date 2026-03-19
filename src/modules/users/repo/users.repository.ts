@@ -66,4 +66,19 @@ export class UsersRepository implements IUserRepository {
     ]);
     return UserMapper.toDomain(doc.toObject() as UserDocLike);
   }
+
+  async update(
+    id: string,
+    data: Partial<UserEntity>,
+  ): Promise<UserEntity | null> {
+    const updatedDoc = await this.userModel
+      .findByIdAndUpdate(id, data, { new: true })
+      .populate('roles')
+      .lean()
+      .exec();
+
+    return updatedDoc
+      ? UserMapper.toDomain(updatedDoc as unknown as UserDocLike)
+      : null;
+  }
 }

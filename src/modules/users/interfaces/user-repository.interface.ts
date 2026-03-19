@@ -11,4 +11,5 @@ export interface IUserRepository {
     name?: string;
     loginType?: string;
   }): Promise<UserEntity>;
+  update(id: string, data: Partial<UserEntity>): Promise<UserEntity | null>;
 }

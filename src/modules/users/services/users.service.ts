@@ -1,4 +1,5 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { USER_REPOSITORY_TOKEN } from '../../../common/constants/injection-tokens';
 import { ResourceNotFoundException } from '../../../common/exceptions/resource-not-found.exception';
 import type { IUserRepository } from '../interfaces/user-repository.interface';
@@ -35,7 +36,6 @@ export class UsersService implements IUserService {
     }
     return UserMapper.toResponse(entity);
   }
-
   /**
    * Internal method for Auth to get full entity with password
    */
@@ -59,6 +59,37 @@ export class UsersService implements IUserService {
       role: role._id,
     });
     return UserMapper.toResponse(entity);
+  }
+
+  async updatePassword(identifier: string, newPassword: string): Promise<void> {
+    const user = await this.userRepo.findByEmailOrUserId(identifier);
+    if (!user) {
+      throw new ResourceNotFoundException('User', identifier);
+    }
+
+    await this.hashAndSavePassword(user.id, newPassword);
+  }
+
+  async updatePasswordById(id: string, newPassword: string): Promise<void> {
+    const user = await this.userRepo.findById(id);
+    if (!user) {
+      throw new ResourceNotFoundException('User', id);
+    }
+
+    await this.hashAndSavePassword(id, newPassword);
+  }
+
+  private async hashAndSavePassword(
+    id: string,
+    newPassword: string,
+  ): Promise<void> {
+    const salt = await bcrypt.genSalt();
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    await this.userRepo.update(id, {
+      password: hashedPassword,
+      passwordUpdatedAt: new Date(),
+    });
   }
 
   private generateUserId(registerType: RegistrationType): string {

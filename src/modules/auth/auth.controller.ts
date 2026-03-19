@@ -1,4 +1,12 @@
-import { Controller, Post, Body, Inject, Get, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Inject,
+  Get,
+  UseGuards,
+  Patch,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -7,9 +15,14 @@ import {
   ApiOkResponse,
   ApiUnauthorizedResponse,
   ApiConflictResponse,
+  ApiBadRequestResponse,
 } from '@nestjs/swagger';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { RequestOtpDto } from './dto/request-otp.dto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import type { IAuthService } from './interfaces/auth-service.interface';
 import { AUTH_SERVICE_TOKEN } from '../../common/constants/injection-tokens';
 import { UserResponseDto } from '../users/dto/user-response.dto';
@@ -28,12 +41,12 @@ export class AuthController {
     private readonly authService: IAuthService,
   ) {}
 
-  @Post('signup')
+  @Post('register-user')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @Roles('admin', 'hr')
   @ApiOperation({
-    summary: 'User Signup',
+    summary: 'User Register',
     description:
       'Register a new user in the system (Restricted to Admin and HR).',
   })
@@ -42,11 +55,11 @@ export class AuthController {
     type: AuthResponseDto,
   })
   @ApiConflictResponse({ description: 'User with this email already exists' })
-  async signUp(
+  async registerUser(
     @Body() registerDto: RegisterDto,
     @CurrentUser() currentUser: JwtPayload,
   ) {
-    return this.authService.signUp(registerDto, currentUser);
+    return this.authService.registerUser(registerDto, currentUser);
   }
 
   @Post('login')
@@ -60,6 +73,59 @@ export class AuthController {
   })
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
+  }
+
+  @Post('otp/request')
+  @ApiOperation({
+    summary: 'Request OTP',
+    description:
+      'Send a one-time password to the user email for various purposes (LOGIN, FORGOT_PASSWORD, RESET_PASSWORD).',
+  })
+  @ApiOkResponse({ description: 'OTP sent successfully' })
+  @ApiBadRequestResponse({ description: 'Invalid identifier or type' })
+  async requestOtp(@Body() dto: RequestOtpDto) {
+    return this.authService.requestOtp(dto);
+  }
+
+  @Post('otp/verify')
+  @ApiOperation({
+    summary: 'Verify OTP',
+    description:
+      'Verify OTP for various purposes. Returns an access token if type is LOGIN.',
+  })
+  @ApiOkResponse({
+    description: 'Verification successful (and Login if type is LOGIN)',
+    type: AuthResponseDto,
+  })
+  @ApiBadRequestResponse({ description: 'Invalid OTP' })
+  async verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.authService.verifyOtp(dto);
+  }
+
+  @Patch('forgot-password')
+  @ApiOperation({
+    summary: 'Forgot Password (Reset)',
+    description: 'Reset password after OTP verification.',
+  })
+  @ApiOkResponse({ description: 'Password reset successfully' })
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Patch('reset-password')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Reset Password (Authenticated)',
+    description:
+      'Update password for a currently logged-in user after OTP verification.',
+  })
+  @ApiOkResponse({ description: 'Password updated successfully' })
+  async resetPassword(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: ResetPasswordDto,
+  ) {
+    return this.authService.resetPassword(user.email, dto);
   }
 
   @Get('me')

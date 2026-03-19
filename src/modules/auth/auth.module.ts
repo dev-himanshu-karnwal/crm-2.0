@@ -12,6 +12,9 @@ import { AUTH_SERVICE_TOKEN } from '../../common/constants/injection-tokens';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { Otp, OtpSchema } from './schemas/otp.schema';
+import { OtpService } from './services/otp.service';
+import { OtpRepository } from './repo/otp.repository';
 
 @Module({
   imports: [
@@ -20,6 +23,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
     MongooseModule.forFeature([
       { name: 'Role', schema: RoleSchema },
       { name: 'Permission', schema: PermissionSchema },
+      { name: Otp.name, schema: OtpSchema },
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -40,10 +44,12 @@ import { RolesGuard } from '../../common/guards/roles.guard';
       useClass: AuthService,
     },
     AuthService,
+    OtpService,
+    OtpRepository,
     JwtStrategy,
     JwtAuthGuard,
     RolesGuard,
   ],
-  exports: [AUTH_SERVICE_TOKEN, AuthService],
+  exports: [AUTH_SERVICE_TOKEN, AuthService, OtpService, OtpRepository],
 })
 export class AuthModule {}
