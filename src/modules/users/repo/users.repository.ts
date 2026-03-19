@@ -16,6 +16,7 @@ export class UsersRepository implements IUserRepository {
   async findById(id: string): Promise<UserEntity | null> {
     const doc = await this.userModel
       .findOne({ _id: id, deletedAt: null })
+      .populate('roles')
       .lean()
       .exec();
     return doc ? UserMapper.toDomain(doc as unknown as UserDocLike) : null;
@@ -30,6 +31,7 @@ export class UsersRepository implements IUserRepository {
           { user_id: normalizedIdentifier },
         ],
       })
+      .populate('roles')
       .lean()
       .exec();
 

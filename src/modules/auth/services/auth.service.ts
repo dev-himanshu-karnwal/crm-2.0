@@ -15,6 +15,9 @@ import { ApiResponseBody } from '../../../common/interfaces/api-response.interfa
 import { UserResponseDto } from '../../users/dto/user-response.dto';
 import { UserMapper } from '../../users/mappers/user.mapper';
 import { AuthResponseDataDto } from '../dto/auth-response.dto';
+import { JwtPayload } from '../strategies/jwt.strategy';
+import { REGISTRATION_TYPE } from '../../users/enums/registration-type.enum';
+import { ForbiddenException } from '@nestjs/common';
 
 @Injectable()
 export class AuthService implements IAuthService {
@@ -27,10 +30,32 @@ export class AuthService implements IAuthService {
 
   async signUp(
     dto: RegisterDto,
+    currentUser: JwtPayload,
   ): Promise<ApiResponseBody<AuthResponseDataDto>> {
     this.logger.debug(`Registering new user: ${dto.email}`);
 
-    // 1. Check if user already exists
+    // 1. Validate permissions based on role
+    const isAdmin = currentUser.roles.includes('admin');
+    const isHr = currentUser.roles.includes(REGISTRATION_TYPE.HR);
+
+    if (isHr && !isAdmin) {
+      // HR can only register employee, intern, contractor
+      const allowedTypes: string[] = [
+        REGISTRATION_TYPE.EMPLOYEE,
+        REGISTRATION_TYPE.INTERN,
+        REGISTRATION_TYPE.CONTRACTOR,
+      ];
+      if (!allowedTypes.includes(dto.registrationType)) {
+        throw new ForbiddenException(
+          'HR can only register employees, interns, and contractors',
+        );
+      }
+    } else if (!isAdmin) {
+      // Should be caught by guard, but let's be safe
+      throw new ForbiddenException('Only Admin and HR can register new users');
+    }
+
+    // 2. Check if user already exists
     const existingUser = await this.usersService.findEntityByEmailOrUserId(
       dto.email,
     );
@@ -38,11 +63,11 @@ export class AuthService implements IAuthService {
       throw new ConflictException('User with this email already exists');
     }
 
-    // 2. Hash password
+    // 3. Hash password
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hash(dto.password, salt);
 
-    // 3. Create user
+    // 4. Create user
     const newUser = await this.usersService.create({
       email: dto.email,
       password: hashedPassword,
@@ -50,11 +75,12 @@ export class AuthService implements IAuthService {
       registrationType: dto.registrationType,
     });
 
-    // 3. Generate JWT
-    const payload = {
-      sub: newUser.id, // Assuming user.id exists (Mongoose _id)
+    // 5. Generate JWT
+    const payload: JwtPayload = {
+      sub: newUser.id,
       userId: newUser.userId,
       email: newUser.email,
+      roles: newUser.roles,
     };
     const token = await this.jwtService.signAsync(payload);
 
@@ -91,10 +117,12 @@ export class AuthService implements IAuthService {
     }
 
     // 3. Generate JWT
-    const payload = {
-      sub: user.id, // Assuming user.id exists (Mongoose _id)
+    const fetchedUser = await this.usersService.findById(user.id);
+    const payload: JwtPayload = {
+      sub: user.id,
       userId: user.userId,
       email: user.email,
+      roles: fetchedUser.roles,
     };
     const token = await this.jwtService.signAsync(payload);
 

@@ -11,6 +11,7 @@ import { PermissionSchema } from '../users/schemas/permission.schema';
 import { AUTH_SERVICE_TOKEN } from '../../common/constants/injection-tokens';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
     AuthService,
     JwtStrategy,
     JwtAuthGuard,
+    RolesGuard,
   ],
   exports: [AUTH_SERVICE_TOKEN, AuthService],
 })

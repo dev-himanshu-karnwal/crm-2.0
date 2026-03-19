@@ -24,7 +24,12 @@ export class UserMapper {
       doc.name ?? null,
       (doc.roles || [])
         .filter((r) => r !== null && r !== undefined)
-        .map((r) => r.toString()),
+        .map((r) => {
+          if (typeof r === 'object' && r !== null && 'name' in r) {
+            return String((r as { name: string }).name);
+          }
+          return String(r);
+        }),
       doc.createdAt,
       doc.updatedAt,
       doc.passwordUpdatedAt,
@@ -41,6 +46,7 @@ export class UserMapper {
     dto.name = entity.name;
     dto.createdAt = entity.createdAt.toISOString();
     dto.updatedAt = entity.updatedAt.toISOString();
+    dto.roles = entity.roles;
     return dto;
   }
 }
