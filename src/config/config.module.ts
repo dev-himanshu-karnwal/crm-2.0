@@ -4,13 +4,14 @@ import { appConfig } from './app.config';
 import { databaseConfig } from './database.config';
 import { AppConfigService } from './app-config.service';
 import { redisConfig } from './redis.config';
+import { mailConfig } from './mail.config';
 
 @Global()
 @Module({
   imports: [
     NestConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig, databaseConfig, redisConfig],
+      load: [appConfig, databaseConfig, redisConfig, mailConfig],
     }),
   ],
   providers: [AppConfigService],

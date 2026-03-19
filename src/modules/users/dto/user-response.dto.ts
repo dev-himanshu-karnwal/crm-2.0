@@ -7,6 +7,9 @@ export class UserResponseDto {
   @ApiProperty()
   email: string;
 
+  @ApiProperty()
+  userId: string;
+
   @ApiPropertyOptional()
   name?: string | null;
 
@@ -15,4 +18,7 @@ export class UserResponseDto {
 
   @ApiProperty()
   updatedAt: string;
+
+  @ApiProperty({ type: [String] })
+  roles: string[];
 }
