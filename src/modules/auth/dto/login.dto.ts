@@ -6,7 +6,7 @@ export class LoginDto {
   @ApiProperty({ example: 'user@example.com' })
   @IsNotEmpty()
   @IsString()
-  @Transform(({ value }: { value: string }) => value?.toLowerCase().trim())
+  @Transform(({ value }: { value: string }) => value?.trim())
   identifier: string;
 
   @ApiProperty({ example: 'password123' })

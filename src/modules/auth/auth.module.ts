@@ -9,6 +9,8 @@ import { AuthController } from './auth.controller';
 import { RoleSchema } from '../users/schemas/role.schema';
 import { PermissionSchema } from '../users/schemas/permission.schema';
 import { AUTH_SERVICE_TOKEN } from '../../common/constants/injection-tokens';
+import { JwtStrategy } from './strategies/jwt.strategy';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -36,7 +38,9 @@ import { AUTH_SERVICE_TOKEN } from '../../common/constants/injection-tokens';
       provide: AUTH_SERVICE_TOKEN,
       useClass: AuthService,
     },
-    AuthService, // Exported directly for easier injection if needed, but primary is the token
+    AuthService,
+    JwtStrategy,
+    JwtAuthGuard,
   ],
   exports: [AUTH_SERVICE_TOKEN, AuthService],
 })

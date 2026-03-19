@@ -22,14 +22,23 @@ export class UsersRepository implements IUserRepository {
   }
 
   async findByEmailOrUserId(identifier: string): Promise<UserEntity | null> {
+    const normalizedIdentifier = identifier.trim();
     const doc = await this.userModel
       .findOne({
-        $or: [{ email: identifier }, { user_id: identifier }],
-        deletedAt: null,
+        $or: [
+          { email: normalizedIdentifier.toLowerCase() },
+          { user_id: normalizedIdentifier },
+        ],
       })
       .lean()
       .exec();
+
     return doc ? UserMapper.toDomain(doc as unknown as UserDocLike) : null;
+  }
+
+  async findRoleByName(name: string): Promise<{ _id: string } | null> {
+    const role = await this.userModel.db.collection('roles').findOne({ name });
+    return role ? { _id: role._id.toString() } : null;
   }
 
   async create(data: {

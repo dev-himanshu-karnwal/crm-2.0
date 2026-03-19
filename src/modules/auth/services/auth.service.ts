@@ -13,6 +13,8 @@ import { IAuthService } from '../interfaces/auth-service.interface';
 import { ApiResponse } from '../../../common/classes/api-response.class';
 import { ApiResponseBody } from '../../../common/interfaces/api-response.interface';
 import { UserResponseDto } from '../../users/dto/user-response.dto';
+import { UserMapper } from '../../users/mappers/user.mapper';
+import { AuthResponseDataDto } from '../dto/auth-response.dto';
 
 @Injectable()
 export class AuthService implements IAuthService {
@@ -23,7 +25,9 @@ export class AuthService implements IAuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async signUp(dto: RegisterDto): Promise<ApiResponseBody<UserResponseDto>> {
+  async signUp(
+    dto: RegisterDto,
+  ): Promise<ApiResponseBody<AuthResponseDataDto>> {
     this.logger.debug(`Registering new user: ${dto.email}`);
 
     // 1. Check if user already exists
@@ -46,12 +50,26 @@ export class AuthService implements IAuthService {
       registrationType: dto.registrationType,
     });
 
-    return ApiResponse.success(newUser, 'User registered successfully');
+    // 3. Generate JWT
+    const payload = {
+      sub: newUser.id, // Assuming user.id exists (Mongoose _id)
+      userId: newUser.userId,
+      email: newUser.email,
+    };
+    const token = await this.jwtService.signAsync(payload);
+
+    return ApiResponse.success(
+      {
+        accessToken: token,
+        userId: newUser.userId,
+        email: newUser.email,
+        name: newUser.name,
+      },
+      'User registered successfully',
+    );
   }
 
-  async login(
-    dto: LoginDto,
-  ): Promise<ApiResponseBody<{ accessToken: string }>> {
+  async login(dto: LoginDto): Promise<ApiResponseBody<AuthResponseDataDto>> {
     this.logger.debug(`Login attempt for: ${dto.identifier}`);
 
     // 1. Find user
@@ -80,6 +98,25 @@ export class AuthService implements IAuthService {
     };
     const token = await this.jwtService.signAsync(payload);
 
-    return ApiResponse.success({ accessToken: token }, 'Login successful');
+    return ApiResponse.success(
+      {
+        accessToken: token,
+        userId: user.userId,
+        email: user.email,
+        name: user.name,
+      },
+      'Login successful',
+    );
+  }
+
+  async getMe(userId: string): Promise<ApiResponseBody<UserResponseDto>> {
+    const user = await this.usersService.findEntityByEmailOrUserId(userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    return ApiResponse.success(
+      UserMapper.toResponse(user),
+      'User profile fetched successfully',
+    );
   }
 }

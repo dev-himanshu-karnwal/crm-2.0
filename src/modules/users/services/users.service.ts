@@ -46,9 +46,17 @@ export class UsersService implements IUserService {
   async create(data: CreateUserDto): Promise<UserResponseDto> {
     const userIdToUse = this.generateUserId(data.registrationType);
 
+    // Find the role ID for the registration type
+    const role = await this.userRepo.findRoleByName(data.registrationType);
+    if (!role) {
+      this.logger.error(`Role not found for type: ${data.registrationType}`);
+      throw new Error(`System error: default role not configured`);
+    }
+
     const entity = await this.userRepo.create({
       ...data,
       userId: userIdToUse,
+      role: role._id,
     });
     return UserMapper.toResponse(entity);
   }

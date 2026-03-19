@@ -22,7 +22,9 @@ export class UserMapper {
       doc.email,
       doc.user_id,
       doc.name ?? null,
-      doc.roles.map((r) => r.toString()),
+      (doc.roles || [])
+        .filter((r) => r !== null && r !== undefined)
+        .map((r) => r.toString()),
       doc.createdAt,
       doc.updatedAt,
       doc.passwordUpdatedAt,
