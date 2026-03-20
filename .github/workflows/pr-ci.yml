@@ -74,7 +74,6 @@ jobs:
 
             core.info(`Requesting changes on PR #${pr.number} due to CI failure.`);
 
-            // 1. Leave a comment
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -82,40 +81,41 @@ jobs:
               body: `CI failed for this pull request.\n\nPlease fix the issues before merging.\n\nRun: ${runUrl}`,
             });
 
-            // 2. Request changes (review)
-            await github.rest.pulls.createReview({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: pr.number,
-              event: 'REQUEST_CHANGES',
-              body: `CI checks failed. Fix all issues before requesting review again.\n\nRun: ${runUrl}`,
-            });
+    pr-feedback:
+      needs: ci
+      if: ${{ always() }}
+      runs-on: ubuntu-latest
+      steps:
+        - name: Comment PR with CI result
+          uses: actions/github-script@v7
+          with:
+            script: |
+              const pr = context.payload.pull_request;
+              if (!pr) {
+                core.info('No pull_request payload found; skipping.');
+                return;
+              }
 
-  auto-clear-on-success:
-    needs: ci
-    if: ${{ needs.ci.result == 'success' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/github-script@v7
-        with:
-          script: |
-            const pr = context.payload.pull_request;
-            if (!pr) return;
+              const { owner, repo } = context.repo;
+              const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${context.runId}`;
 
-            const reviews = await github.rest.pulls.listReviews({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: pr.number,
-            });
+              const result = '${{ needs.ci.result }}';
 
-            const botReviews = reviews.data.filter(r =>
-              r.user.type === 'Bot' && r.state === 'CHANGES_REQUESTED'
-            );
+              let message;
 
-            for (const review of botReviews) {
-              await github.rest.pulls.createReview({
-                pull_number: pr.number,
-                event: 'APPROVE',
-                body: 'CI passed ✅',
+              if (result === 'success') {
+                message = `✅ CI passed\n\nRun: ${runUrl}`;
+              } else if (result === 'failure') {
+                message = `❌ CI failed\n\nFix issues before merging.\n\nRun: ${runUrl}`;
+              } else if (result === 'cancelled') {
+                message = `⚠️ CI cancelled\n\nRun: ${runUrl}`;
+              } else {
+                message = `ℹ️ CI status: ${result}\n\nRun: ${runUrl}`;
+              }
+
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: pr.number,
+                body: message,
               });
-            }
