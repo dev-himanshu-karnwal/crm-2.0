@@ -1,0 +1,40 @@
+services:
+  api:
+    build: .
+    container_name: crm_2.0
+    ports:
+      - 5000:5000
+    env_file:
+      - .env.development
+    depends_on:
+      - mongo
+      - redis
+    
+  mongo:
+    image: mongo:6
+    container_name: crm_2.0_mongo
+    restart: unless-stopped
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - 27019:27017
+    volumes:
+      - crm_2.0_mongo:/data/db
+    healthcheck:
+      test: echo "try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongo:27017'}]}) }" | mongosh --port 27017 --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+  redis: # New Service
+    image: redis:7-alpine
+    container_name: crm_2.0_redis
+    restart: unless-stopped
+    ports:
+      - 6379:6379
+    volumes:
+      - crm_2.0_redis_data:/data  
+volumes:
+  crm_2.0_mongo:
+  crm_2.0_redis_data:
+    
+    

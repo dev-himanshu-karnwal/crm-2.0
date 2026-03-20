@@ -1,0 +1,121 @@
+name: CI (PR)
+
+on:
+  pull_request:
+    branches:
+      - dev
+      - master
+
+concurrency:
+  group: pr-ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Prettier check
+        run: pnpm exec prettier --check "src/**/*.ts"
+
+      - name: ESLint check
+        run: pnpm exec eslint "src/**/*.ts"
+
+      - name: Type check
+        run: pnpm exec tsc --noEmit
+
+      - name: Build
+        run: pnpm run build
+
+  auto-feedback-on-failure:
+    needs: ci
+    if: ${{ always() && needs.ci.result == 'failure' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment and request changes on CI failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) {
+              core.info('No pull_request payload found; skipping.');
+              return;
+            }
+
+            const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${context.runId}`;
+
+            const isFork = pr.head?.repo?.fork;
+            if (isFork) {
+              core.info('PR from a fork; skipping review request.');
+              return;
+            }
+
+            core.info(`Requesting changes on PR #${pr.number} due to CI failure.`);
+
+            // 1. Leave a comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body: `CI failed for this pull request.\n\nPlease fix the issues before merging.\n\nRun: ${runUrl}`,
+            });
+
+            // 2. Request changes (review)
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              event: 'REQUEST_CHANGES',
+              body: `CI checks failed. Fix all issues before requesting review again.\n\nRun: ${runUrl}`,
+            });
+
+  auto-clear-on-success:
+    needs: ci
+    if: ${{ needs.ci.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) return;
+
+            const reviews = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+            });
+
+            const botReviews = reviews.data.filter(r =>
+              r.user.type === 'Bot' && r.state === 'CHANGES_REQUESTED'
+            );
+
+            for (const review of botReviews) {
+              await github.rest.pulls.createReview({
+                pull_number: pr.number,
+                event: 'APPROVE',
+                body: 'CI passed ✅',
+              });
+            }

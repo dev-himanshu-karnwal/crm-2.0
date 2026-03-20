@@ -5,6 +5,7 @@ import { AppConfigService } from './config/app-config.service';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { RequestIdInterceptor } from './common/interceptors/request-id.interceptor';
 import { ApiResponseInterceptor } from './common/interceptors/api-response.interceptor';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
@@ -25,6 +26,15 @@ async function bootstrap(): Promise<void> {
     new RequestIdInterceptor(),
     new ApiResponseInterceptor(),
   );
+
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('Doctor Status Platform API')
+    .setDescription('API documentation for the Doctor Status Platform')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/docs', app, document);
 
   await app.listen(config.port);
 }
