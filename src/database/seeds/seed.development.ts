@@ -18,6 +18,7 @@ async function run(): Promise<void> {
     await seedSuperadmin(conn, SUPERADMIN);
     console.log('  ✓ Superadmin account');
     console.log('Seed complete.');
+    
   } catch (err) {
     console.error('Seed execution error:', err);
     throw err;
