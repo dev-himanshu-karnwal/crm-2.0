@@ -16,6 +16,7 @@ import {
   ApiUnauthorizedResponse,
   ApiConflictResponse,
   ApiBadRequestResponse,
+  ApiExtraModels,
 } from '@nestjs/swagger';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -25,15 +26,17 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import type { IAuthService } from './interfaces/auth-service.interface';
 import { AUTH_SERVICE_TOKEN } from '../../common/constants/injection-tokens';
-import { UserResponseDto } from '../users/dto/user-response.dto';
+import { UserSuccessResponseDto } from '../users/dto/user-success-response.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import type { JwtPayload } from './strategies/jwt.strategy';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { SuccessResponseDto } from '../../common/dto/api-response.dto';
 
 @ApiTags('Auth')
+@ApiExtraModels(AuthResponseDto, SuccessResponseDto, UserSuccessResponseDto)
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -81,7 +84,10 @@ export class AuthController {
     description:
       'Send a one-time password to the user email for various purposes (LOGIN, FORGOT_PASSWORD, RESET_PASSWORD).',
   })
-  @ApiOkResponse({ description: 'OTP sent successfully' })
+  @ApiOkResponse({
+    description: 'OTP sent successfully',
+    type: SuccessResponseDto,
+  })
   @ApiBadRequestResponse({ description: 'Invalid identifier or type' })
   async requestOtp(@Body() dto: RequestOtpDto) {
     return this.authService.requestOtp(dto);
@@ -95,7 +101,7 @@ export class AuthController {
   })
   @ApiOkResponse({
     description: 'Verification successful (and Login if type is LOGIN)',
-    type: AuthResponseDto,
+    type: SuccessResponseDto,
   })
   @ApiBadRequestResponse({ description: 'Invalid OTP' })
   async verifyOtp(@Body() dto: VerifyOtpDto) {
@@ -107,7 +113,10 @@ export class AuthController {
     summary: 'Forgot Password (Reset)',
     description: 'Reset password after OTP verification.',
   })
-  @ApiOkResponse({ description: 'Password reset successfully' })
+  @ApiOkResponse({
+    description: 'Password reset successfully',
+    type: SuccessResponseDto,
+  })
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto);
   }
@@ -120,7 +129,10 @@ export class AuthController {
     description:
       'Update password for a currently logged-in user after OTP verification.',
   })
-  @ApiOkResponse({ description: 'Password updated successfully' })
+  @ApiOkResponse({
+    description: 'Password updated successfully',
+    type: SuccessResponseDto,
+  })
   async resetPassword(
     @CurrentUser() user: JwtPayload,
     @Body() dto: ResetPasswordDto,
@@ -137,7 +149,7 @@ export class AuthController {
   })
   @ApiOkResponse({
     description: 'User profile fetched successfully',
-    type: UserResponseDto,
+    type: UserSuccessResponseDto,
   })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   async getMe(@CurrentUser() user: JwtPayload) {
