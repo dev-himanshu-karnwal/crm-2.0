@@ -1,0 +1,89 @@
+name: CI (PR)
+
+on:
+  pull_request:
+    branches:
+      - dev
+      - master
+
+concurrency:
+  group: pr-ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Activate pnpm
+        run: corepack prepare pnpm@9 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prettier check
+        run: pnpm exec prettier --check "src/**/*.ts"
+
+      - name: ESLint check
+        run: pnpm exec eslint "src/**/*.ts"
+
+      - name: Build
+        run: pnpm run build
+
+  auto-feedback-on-failure:
+    needs: ci
+    if: ${{ always() && needs.ci.result == 'failure' }}
+    runs-on: ubuntu-latest
+    env:
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Comment and request changes on CI failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) {
+              core.info('No pull_request payload found; skipping.');
+              return;
+            }
+
+            const isFork = pr.head?.repo?.fork;
+            if (isFork) {
+              core.info('PR from a fork; skipping review request.');
+              return;
+            }
+
+            core.info(`Requesting changes on PR #${pr.number} due to CI failure.`);
+
+            // 1. Leave a comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body: `CI failed for this pull request.\n\nPlease fix the issues before merging.\n\nRun: ${process.env.RUN_URL}`,
+            });
+
+            // 2. Request changes (review)
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              event: 'REQUEST_CHANGES',
+              body: `CI checks failed. Fix all issues before requesting review again.\n\nRun: ${process.env.RUN_URL}`,
+            });
