@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { BaseApiResponseDto } from '../../../common/dto/api-response.dto';
 
 export class AuthResponseDataDto {
   @ApiProperty()
@@ -14,15 +15,12 @@ export class AuthResponseDataDto {
   name?: string | null;
 }
 
-export class AuthResponseDto {
-  @ApiProperty({ example: 'success' })
-  status: string;
-
-  @ApiProperty({ example: 'Operation successful' })
-  message: string;
-
+export class AuthResponseDataWrapperDto {
   @ApiProperty({ type: AuthResponseDataDto })
-  data: {
-    entity: AuthResponseDataDto;
-  };
+  entity: AuthResponseDataDto;
+}
+
+export class AuthResponseDto extends BaseApiResponseDto {
+  @ApiProperty({ type: AuthResponseDataWrapperDto })
+  data: AuthResponseDataWrapperDto;
 }
