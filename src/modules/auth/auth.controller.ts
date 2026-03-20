@@ -26,17 +26,20 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import type { IAuthService } from './interfaces/auth-service.interface';
 import { AUTH_SERVICE_TOKEN } from '../../common/constants/injection-tokens';
-import { UserSuccessResponseDto } from '../users/dto/user-success-response.dto';
+import { UserResponseDto } from '../users/dto/user-response.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import type { JwtPayload } from './strategies/jwt.strategy';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { SuccessResponseDto } from '../../common/dto/api-response.dto';
+import {
+  SuccessResponseDto,
+  ApiResponseDto,
+} from '../../common/dto/api-response.dto';
 
 @ApiTags('Auth')
-@ApiExtraModels(AuthResponseDto, SuccessResponseDto, UserSuccessResponseDto)
+@ApiExtraModels(AuthResponseDto, SuccessResponseDto)
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -149,7 +152,7 @@ export class AuthController {
   })
   @ApiOkResponse({
     description: 'User profile fetched successfully',
-    type: UserSuccessResponseDto,
+    type: ApiResponseDto(UserResponseDto),
   })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   async getMe(@CurrentUser() user: JwtPayload) {

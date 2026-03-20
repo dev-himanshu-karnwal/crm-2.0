@@ -8,7 +8,7 @@ import {
 } from '@nestjs/swagger';
 import { UsersService } from './services/users.service';
 import { UserResponseDto } from './dto/user-response.dto';
-import { UserSuccessResponseDto } from './dto/user-success-response.dto';
+import { ApiResponseDto } from '../../common/dto/api-response.dto';
 import { ParseObjectIdPipe } from '../../common/pipes/parse-object-id.pipe';
 import { Public } from '../../common/decorators/public.decorator';
 
@@ -20,7 +20,7 @@ export class UsersController {
   @Get(':id')
   @Public()
   @ApiOperation({ summary: 'Get user by id' })
-  @ApiOkResponse({ type: UserSuccessResponseDto })
+  @ApiOkResponse({ type: ApiResponseDto(UserResponseDto) })
   @ApiNotFoundResponse({ description: 'User not found' })
   @ApiBadRequestResponse({ description: 'Invalid ObjectId' })
   async findOne(
