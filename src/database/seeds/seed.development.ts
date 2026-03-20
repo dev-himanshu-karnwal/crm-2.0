@@ -13,9 +13,7 @@ async function run(): Promise<void> {
   try {
     await seedPermissions(conn, PERMISSIONS);
     console.log('  ✓ Permissions');
-
-
-    await seedRoles(conn, ROLES)
+    await seedRoles(conn, ROLES);
     console.log('  ✓ Roles');
     await seedSuperadmin(conn, SUPERADMIN);
     console.log('  ✓ Superadmin account');
